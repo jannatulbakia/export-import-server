@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "productName": "Bangladeshi Jute Bag",
+    "image": "https://i.ibb.co/6yfbx8z/jute-bag.jpg",
+    "price": 25.5,
+    "originCountry": "Bangladesh",
+    "rating": 4.7,
+    "availableQuantity": 120,
+    "createdAt": "2025-11-11T09:15:00Z"
+  },
+  {
+    "id": 2,
+    "productName": "Japanese Green Tea",
+    "image": "https://i.ibb.co/6Ncg9Xb/green-tea.jpg",
+    "price": 15.99,
+    "originCountry": "Japan",
+    "rating": 4.8,
+    "availableQuantity": 200,
+    "createdAt": "2025-11-10T14:10:00Z"
+  },
+  {
+    "id": 3,
+    "productName": "Italian Olive Oil",
+    "image": "https://i.ibb.co/sbQvJSt/olive-oil.jpg",
+    "price": 18.99,
+    "originCountry": "Italy",
+    "rating": 4.6,
+    "availableQuantity": 85,
+    "createdAt": "2025-11-09T18:40:00Z"
+  },
+  {
+    "id": 4,
+    "productName": "Brazilian Coffee Beans",
+    "image": "https://i.ibb.co/fFGzTbS/coffee-beans.jpg",
+    "price": 22.75,
+    "originCountry": "Brazil",
+    "rating": 4.9,
+    "availableQuantity": 60,
+    "createdAt": "2025-11-09T07:25:00Z"
+  },
+  {
+    "id": 5,
+    "productName": "Turkish Handcrafted Lamp",
+    "image": "https://i.ibb.co/4p1fymb/turkish-lamp.jpg",
+    "price": 45.0,
+    "originCountry": "Turkey",
+    "rating": 4.5,
+    "availableQuantity": 40,
+    "createdAt": "2025-11-08T12:00:00Z"
+  },
+  {
+    "id": 6,
+    "productName": "Indian Spices Combo",
+    "image": "https://i.ibb.co/qDTTj3F/indian-spices.jpg",
+    "price": 30.0,
+    "originCountry": "India",
+    "rating": 4.8,
+    "availableQuantity": 150,
+    "createdAt": "2025-11-07T09:00:00Z"
+  },
+  {
+    "id": 7,
+    "productName": "Swiss Chocolate Box",
+    "image": "https://i.ibb.co/LxrTCv2/swiss-chocolate.jpg",
+    "price": 35.5,
+    "originCountry": "Switzerland",
+    "rating": 4.9,
+    "availableQuantity": 70,
+    "createdAt": "2025-11-06T11:45:00Z"
+  },
+  {
+    "id": 8,
+    "productName": "Egyptian Cotton Sheets",
+    "image": "https://i.ibb.co/v1rYqT3/egyptian-cotton.jpg",
+    "price": 60.0,
+    "originCountry": "Egypt",
+    "rating": 4.7,
+    "availableQuantity": 50,
+    "createdAt": "2025-11-05T16:30:00Z"
+  },
+  {
+    "id": 9,
+    "productName": "Moroccan Ceramic Vase",
+    "image": "https://i.ibb.co/WtRtr4y/moroccan-vase.jpg",
+    "price": 42.25,
+    "originCountry": "Morocco",
+    "rating": 4.6,
+    "availableQuantity": 35,
+    "createdAt": "2025-11-04T19:20:00Z"
+  },
+  {
+    "id": 10,
+    "productName": "French Perfume Set",
+    "image": "https://i.ibb.co/Y2mLGm8/french-perfume.jpg",
+    "price": 55.99,
+    "originCountry": "France",
+    "rating": 4.9,
+    "availableQuantity": 45,
+    "createdAt": "2025-11-03T08:10:00Z"
+  },
+  {
+    "id": 11,
+    "productName": "Korean Skincare Pack",
+    "image": "https://i.ibb.co/hyLdD8H/korean-skincare.jpg",
+    "price": 48.75,
+    "originCountry": "South Korea",
+    "rating": 4.8,
+    "availableQuantity": 90,
+    "createdAt": "2025-11-02T15:40:00Z"
+  },
+  {
+    "id": 12,
+    "productName": "Mexican Handwoven Blanket",
+    "image": "https://i.ibb.co/MZ2PfCq/mexican-blanket.jpg",
+    "price": 38.0,
+    "originCountry": "Mexico",
+    "rating": 4.7,
+    "availableQuantity": 65,
+    "createdAt": "2025-11-01T10:25:00Z"
+  }
+]
