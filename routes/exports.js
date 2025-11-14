@@ -2,10 +2,11 @@ const express = require('express');
 const router = express.Router();
 const Export = require('../models/Export');
 const Product = require('../models/Product');
+
 router.post('/', async (req, res) => {
   const { name, image, price, country, rating, availableQuantity, userId } = req.body;
 
-  if (!name || !image || !price || !country || !availableQuantity) {
+  if (!name || !image || !price || !country || !availableQuantity || !userId) {
     return res.status(400).json({ error: 'All required fields are missing' });
   }
 
@@ -17,14 +18,14 @@ router.post('/', async (req, res) => {
       country,
       rating: rating || 4.5,
       availableQuantity,
-      addedBy: userId || 'anonymous',
+      addedBy: userId,
     });
 
     await newProduct.save();
 
     const newExport = new Export({
-      product: newProduct.toObject(),
-      userId: userId || 'anonymous',
+      product: newProduct._id,
+      userId,
     });
 
     await newExport.save();
@@ -35,52 +36,72 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: err.message || 'Server error' });
   }
 });
+
 router.get('/my', async (req, res) => {
   const { userId } = req.query;
 
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
   try {
-    const exports = await Export.find().sort({ createdAt: -1 });
+    const exports = await Export.find({ userId }).populate('product').sort({ createdAt: -1 });
     res.json(exports);
   } catch (err) {
+    console.error('Get exports error:', err);
     res.status(500).json({ error: err.message });
   }
 });
+
 router.put('/:id', async (req, res) => {
-  const updates = req.body;
+  const { name, image, price, country, rating, availableQuantity, userId } = req.body;
+  const exportId = req.params.id;
+
+  if (!name || !image || !price || !country || !availableQuantity || !userId) {
+    return res.status(400).json({ error: 'All required fields are missing' });
+  }
 
   try {
-    const exp = await Export.findById(req.params.id);
-    if (!exp) return res.status(404).json({ error: 'Export not found' });
-    await Product.findOneAndUpdate(
-      { name: exp.product.name },
-      updates,
+    const exp = await Export.findOne({ _id: exportId, userId });
+    if (!exp) {
+      return res.status(404).json({ error: 'Export not found or unauthorized' });
+    }
+    const updatedProduct = await Product.findByIdAndUpdate(
+      exp.product,
+      { name, image, price, country, rating: rating || 4.5, availableQuantity, addedBy: userId },
       { new: true, runValidators: true }
     );
 
-    const updatedExport = await Export.findByIdAndUpdate(
-      req.params.id,
-      { product: { ...exp.product, ...updates } },
-      { new: true }
-    );
+    if (!updatedProduct) {
+      return res.status(404).json({ error: 'Associated product not found' });
+    }
 
-    res.json(updatedExport);
+    exp.product = updatedProduct._id;
+    await exp.save();
+
+    res.json({ message: 'Product updated successfully', export: { ...exp.toObject(), product: updatedProduct } });
   } catch (err) {
     console.error('Update error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 });
 
 router.delete('/:id', async (req, res) => {
+  const exportId = req.params.id;
+
   try {
-    const exp = await Export.findById(req.params.id);
-    if (!exp) return res.status(404).json({ error: 'Not found' });
-    await Product.findOneAndDelete({ name: exp.product.name });
-    await Export.findByIdAndDelete(req.params.id);
+    const exp = await Export.findById(exportId);
+    if (!exp) {
+      return res.status(404).json({ error: 'Export not found' });
+    }
+
+    await Product.findByIdAndDelete(exp.product);
+    await Export.findByIdAndDelete(exportId);
 
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {
     console.error('Delete error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message || 'Server error' });
   }
 });
 
