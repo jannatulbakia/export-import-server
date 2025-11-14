@@ -66,9 +66,10 @@ router.put('/:id', async (req, res) => {
     if (!exp) {
       return res.status(404).json({ error: 'Export not found or unauthorized' });
     }
+    
     const updatedProduct = await Product.findByIdAndUpdate(
       exp.product,
-      { name, image, price, country, rating: rating || 4.5, availableQuantity, addedBy: userId },
+      { name, image, price, country, rating: rating || 4.5, availableQuantity },
       { new: true, runValidators: true }
     );
 
@@ -76,16 +77,12 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Associated product not found' });
     }
 
-    exp.product = updatedProduct._id;
-    await exp.save();
-
     res.json({ message: 'Product updated successfully', export: { ...exp.toObject(), product: updatedProduct } });
   } catch (err) {
     console.error('Update error:', err);
     res.status(500).json({ error: err.message || 'Server error' });
   }
 });
-
 router.delete('/:id', async (req, res) => {
   const exportId = req.params.id;
 
