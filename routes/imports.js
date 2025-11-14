@@ -40,7 +40,8 @@ router.get('/my', async (req, res) => {
     const imports = await Import.find()
       .populate({
         path: 'productId',
-        select: 'name image price country rating availableQuantity'
+        select: 'name image price country rating availableQuantity',
+        match: { $exists: true } // Only populate if product exists
       })
       .sort({ importedAt: -1 });
 
@@ -48,8 +49,8 @@ router.get('/my', async (req, res) => {
 
     const formatted = imports
       .filter(i => {
-        if (!i.productId) {
-          console.warn(`Skipping import ${i._id} with null or invalid productId`);
+        if (!i.productId || i.productId.length === 0) { // i.productId is array from populate if no match
+          console.warn(`Skipping import ${i._id} with invalid productId: ${i.productId}`);
           return false;
         }
         return true;
