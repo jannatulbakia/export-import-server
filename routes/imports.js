@@ -29,7 +29,7 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ message: 'Imported successfully', data: newImport });
   } catch (err) {
-    console.error('Import error:', { message: err.message, stack: err.stack });
+    console.error('Import error:', { message: err.message, stack: err.stack, productId, quantity });
     res.status(500).json({ error: `Server error: ${err.message}` });
   }
 });
@@ -38,31 +38,36 @@ router.get('/my', async (req, res) => {
   try {
     console.log('Fetching all imports');
 
-    // Fetch imports and filter out those with invalid productId
+    // Fetch imports and filter out invalid productId
     const imports = await Import.find({
       productId: { $ne: null, $exists: true }
     }).sort({ importedAt: -1 });
 
-    console.log(`Found ${imports.length} imports`);
+    console.log(`Found ${imports.length} imports`, { importIds: imports.map(i => i._id.toString()) });
 
-    // Verify productId existence before populating
+    // Verify productId existence
     const validImports = [];
     for (const imp of imports) {
-      const product = await Product.findById(imp.productId);
-      if (product) {
-        validImports.push(imp);
-      } else {
-        console.warn(`Skipping import ${imp._id} with invalid productId: ${imp.productId}`);
+      try {
+        const product = await Product.findById(imp.productId);
+        if (product) {
+          validImports.push(imp);
+        } else {
+          console.warn(`Skipping import ${imp._id} with invalid productId: ${imp.productId}`);
+        }
+      } catch (err) {
+        console.error(`Error checking productId for import ${imp._id}:`, { message: err.message, stack: err.stack });
+        continue;
       }
     }
 
-    // Populate only valid imports
+    console.log(`Processing ${validImports.length} valid imports`, { validImportIds: validImports.map(i => i._id.toString()) });
+
+    // Populate valid imports
     const populatedImports = await Import.populate(validImports, {
       path: 'productId',
       select: 'name image price country rating availableQuantity'
     });
-
-    console.log(`Processing ${populatedImports.length} valid imports`);
 
     const formatted = populatedImports.map(i => {
       try {
@@ -81,15 +86,15 @@ router.get('/my', async (req, res) => {
           importedAt: i.importedAt
         };
       } catch (err) {
-        console.error(`Error formatting import ${i._id}:`, err.message);
+        console.error(`Error formatting import ${i._id}:`, { message: err.message, stack: err.stack });
         return null;
       }
     }).filter(item => item !== null);
 
-    console.log(`Returning ${formatted.length} formatted imports`);
+    console.log(`Returning ${formatted.length} formatted imports`, { formattedIds: formatted.map(i => i._id) });
     res.json(formatted);
   } catch (err) {
-    console.error('Get imports error:', { message: err.message, stack: err.stack });
+    console.error('Get imports error:', { message: err.message, stack: err.stack, stage: 'main' });
     res.status(500).json({ error: `Server error: ${err.message}` });
   }
 });
