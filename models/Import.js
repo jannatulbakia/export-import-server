@@ -11,10 +11,6 @@ const importSchema = new mongoose.Schema({
     required: true,
     min: 1
   },
-  userId: {
-    type: String,
-    required: true
-  },
   importedAt: {
     type: Date,
     default: Date.now

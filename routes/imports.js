@@ -40,8 +40,7 @@ router.get('/my', async (req, res) => {
     const imports = await Import.find()
       .populate({
         path: 'productId',
-        select: 'name image price country rating availableQuantity',
-        match: { $exists: true } // Only populate if product exists
+        select: 'name image price country rating availableQuantity'
       })
       .sort({ importedAt: -1 });
 
@@ -49,26 +48,34 @@ router.get('/my', async (req, res) => {
 
     const formatted = imports
       .filter(i => {
-        if (!i.productId || i.productId.length === 0) { // i.productId is array from populate if no match
+        if (!i.productId) {
           console.warn(`Skipping import ${i._id} with invalid productId: ${i.productId}`);
           return false;
         }
         return true;
       })
-      .map(i => ({
-        _id: i._id.toString(),
-        product: {
-          _id: i.productId._id.toString(),
-          name: i.productId.name || 'Unknown',
-          image: i.productId.image || 'https://via.placeholder.com/150?text=Image+Not+Found',
-          price: i.productId.price || 0,
-          country: i.productId.country || 'N/A',
-          rating: i.productId.rating || 0,
-          availableQuantity: i.productId.availableQuantity || 0
-        },
-        importedQuantity: i.quantity || 0,
-        importedAt: i.importedAt
-      }));
+      .map(i => {
+        try {
+          return {
+            _id: i._id.toString(),
+            product: {
+              _id: i.productId._id.toString(),
+              name: i.productId.name || 'Unknown',
+              image: i.productId.image || 'https://via.placeholder.com/150?text=Image+Not+Found',
+              price: i.productId.price || 0,
+              country: i.productId.country || 'N/A',
+              rating: i.productId.rating || 0,
+              availableQuantity: i.productId.availableQuantity || 0
+            },
+            importedQuantity: i.quantity || 0,
+            importedAt: i.importedAt
+          };
+        } catch (err) {
+          console.error(`Error formatting import ${i._id}:`, err.message);
+          return null;
+        }
+      })
+      .filter(item => item !== null);
 
     console.log(`Returning ${formatted.length} formatted imports`);
     res.json(formatted);
