@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Import = require('../models/Import');
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
+const productsData = require('../product.json'); // Ensure product.json is in the project root
 
+// Existing POST /api/imports
 router.post('/', async (req, res) => {
   const { productId, quantity } = req.body;
 
@@ -34,6 +37,7 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Existing GET /api/imports/my
 router.get('/my', async (req, res) => {
   try {
     console.log('Fetching all imports');
@@ -85,6 +89,7 @@ router.get('/my', async (req, res) => {
   }
 });
 
+// Existing DELETE /api/imports/:id
 router.delete('/:id', async (req, res) => {
   try {
     const imp = await Import.findById(req.params.id);
@@ -100,6 +105,82 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     console.error('Delete import error:', { message: err.message, stack: err.stack });
     res.status(500).json({ error: `Server error: ${err.message}` });
+  }
+});
+
+// New Cleanup Endpoint: POST /api/imports/cleanup
+router.post('/cleanup', async (req, res) => {
+  try {
+    // Step 1: Delete imports missing userId
+    const deleteUserIdResult = await Import.deleteMany({
+      $or: [{ userId: null }, { userId: { $exists: false } }]
+    });
+    console.log(`Deleted ${deleteUserIdResult.deletedCount} imports missing userId`);
+
+    // Step 2: Delete imports with null or missing productId
+    const deleteProductIdResult = await Import.deleteMany({
+      $or: [{ productId: null }, { productId: { $exists: false } }]
+    });
+    console.log(`Deleted ${deleteProductIdResult.deletedCount} imports with invalid productId`);
+
+    // Step 3: Delete imports with non-existent productId
+    const imports = await Import.find({}, { productId: 1 });
+    const invalidImports = [];
+    for (const imp of imports) {
+      const product = await Product.findById(imp.productId);
+      if (!product) {
+        invalidImports.push(imp._id);
+      }
+    }
+    let deleteInvalidProductIdResult = { deletedCount: 0 };
+    if (invalidImports.length > 0) {
+      deleteInvalidProductIdResult = await Import.deleteMany({
+        _id: { $in: invalidImports }
+      });
+      console.log(`Deleted ${deleteInvalidProductIdResult.deletedCount} imports with non-existent productId`);
+    }
+
+    // Step 4: Re-seed products collection
+    await Product.deleteMany({});
+    console.log('Cleared products collection');
+    const products = productsData.map(item => ({
+      _id: new mongoose.Types.ObjectId(),
+      name: item.productName,
+      image: item.image,
+      price: item.price,
+      country: item.originCountry,
+      rating: item.rating,
+      availableQuantity: item.availableQuantity,
+      createdAt: item.createdAt
+    }));
+    await Product.insertMany(products);
+    console.log(`Seeded ${products.length} products`);
+
+    // Step 5: Create a test import
+    const sampleProduct = await Product.findOne();
+    if (sampleProduct) {
+      const newImport = new Import({
+        productId: sampleProduct._id,
+        quantity: 5,
+        importedAt: new Date()
+      });
+      await newImport.save();
+      console.log('Created test import:', newImport);
+    } else {
+      console.warn('No products available to create test import');
+    }
+
+    // Return cleanup results
+    res.json({
+      message: 'Cleanup completed',
+      deletedUserIdCount: deleteUserIdResult.deletedCount,
+      deletedInvalidProductIdCount: deleteProductIdResult.deletedCount + deleteInvalidProductIdResult.deletedCount,
+      seededProductsCount: products.length,
+      testImportCreated: !!sampleProduct
+    });
+  } catch (err) {
+    console.error('Cleanup error:', { message: err.message, stack: err.stack });
+    res.status(500).json({ error: `Cleanup failed: ${err.message}` });
   }
 });
 
