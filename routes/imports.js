@@ -1,124 +1,81 @@
 const express = require('express');
-const router = express.Router();
+const { check, validationResult } = require('express-validator');
 const Import = require('../models/Import');
 const Product = require('../models/Product');
 
-router.post('/', async (req, res) => {
-  const { productId, quantity } = req.body;
-
-  if (!productId || !quantity || quantity <= 0) {
-    return res.status(400).json({ error: 'Invalid data: productId and quantity are required' });
+const router = express.Router();
+const verifyUser = (req, res, next) => {
+  const userId = req.header('X-User-ID');
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized: No user ID provided' });
   }
+  req.userId = userId;
+  next();
+};
 
-  try {
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+router.post(
+  '/',
+  [
+    verifyUser,
+    check('productId', 'Product ID is required').isMongoId(),
+    check('quantity', 'Quantity must be a positive integer').isInt({ min: 1 }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    if (product.availableQuantity < quantity) {
-      return res.status(400).json({ error: 'Not enough stock' });
-    }
+    const { productId, quantity } = req.body;
 
-    await Product.findByIdAndUpdate(productId, {
-      $inc: { availableQuantity: -quantity }
-    });
-
-    const newImport = new Import({ productId, quantity });
-    await newImport.save();
-
-    res.status(201).json({ message: 'Imported successfully', data: newImport });
-  } catch (err) {
-    console.error('Import error:', { message: err.message, stack: err.stack, productId, quantity });
-    res.status(500).json({ error: `Server error: ${err.message}` });
-  }
-});
-
-router.get('/my', async (req, res) => {
-  try {
-    console.log('Fetching all imports');
-
-    // Fetch imports and filter out invalid productId
-    const imports = await Import.find({
-      productId: { $ne: null, $exists: true }
-    }).sort({ importedAt: -1 });
-
-    console.log(`Found ${imports.length} imports`, { importIds: imports.map(i => i._id.toString()) });
-
-    // Verify productId existence
-    const validImports = [];
-    for (const imp of imports) {
-      try {
-        const product = await Product.findById(imp.productId);
-        if (product) {
-          validImports.push(imp);
-        } else {
-          console.warn(`Skipping import ${imp._id} with invalid productId: ${imp.productId}`);
-        }
-      } catch (err) {
-        console.error(`Error checking productId for import ${imp._id}:`, { message: err.message, stack: err.stack });
-        continue;
+    try {
+      const product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ message: 'Product not found' });
       }
-    }
 
-    console.log(`Processing ${validImports.length} valid imports`, { validImportIds: validImports.map(i => i._id.toString()) });
-
-    // Populate valid imports
-    const populatedImports = await Import.populate(validImports, {
-      path: 'productId',
-      select: 'name image price country rating availableQuantity'
-    });
-
-    const formatted = populatedImports.map(i => {
-      try {
-        return {
-          _id: i._id.toString(),
-          product: {
-            _id: i.productId._id.toString(),
-            name: i.productId.name || 'Unknown',
-            image: i.productId.image || 'https://via.placeholder.com/150?text=Image+Not+Found',
-            price: i.productId.price || 0,
-            country: i.productId.country || 'N/A',
-            rating: i.productId.rating || 0,
-            availableQuantity: i.productId.availableQuantity || 0
-          },
-          importedQuantity: i.quantity || 0,
-          importedAt: i.importedAt
-        };
-      } catch (err) {
-        console.error(`Error formatting import ${i._id}:`, { message: err.message, stack: err.stack });
-        return null;
+      if (quantity > product.availableQuantity) {
+        return res.status(400).json({ message: 'Quantity exceeds available stock' });
       }
-    }).filter(item => item !== null);
 
-    console.log(`Returning ${formatted.length} formatted imports`, { formattedIds: formatted.map(i => i._id) });
-    res.json(formatted);
-  } catch (err) {
-    console.error('Get imports error:', { message: err.message, stack: err.stack, stage: 'main' });
-    res.status(500).json({ error: `Server error: ${err.message}` });
-  }
-});
-
-router.delete('/:id', async (req, res) => {
-  try {
-    const imp = await Import.findById(req.params.id);
-    if (!imp) {
-      return res.status(404).json({ error: 'Import not found' });
-    }
-    const product = await Product.findById(imp.productId);
-    if (!product) {
-      console.warn(`Product not found for import ${imp._id}, deleting import only`);
-    } else {
-      await Product.findByIdAndUpdate(imp.productId, {
-        $inc: { availableQuantity: imp.quantity }
+      const importItem = new Import({
+        userId: req.userId,
+        productId,
+        quantity,
       });
+      await importItem.save();
+      await Product.findByIdAndUpdate(productId, { $inc: { availableQuantity: -quantity } });
+
+      res.json(importItem);
+    } catch (error) {
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+);
+router.get('/', verifyUser, async (req, res) => {
+  try {
+    const imports = await Import.find({ userId: req.userId }).populate('productId');
+    res.json(imports);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/:id', verifyUser, async (req, res) => {
+  try {
+    const importItem = await Import.findById(req.params.id);
+    if (!importItem) {
+      return res.status(404).json({ message: 'Import not found' });
     }
 
-    await Import.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Import removed and stock restored' });
-  } catch (err) {
-    console.error('Delete import error:', { message: err.message, stack: err.stack });
-    res.status(500).json({ error: `Server error: ${err.message}` });
+    if (importItem.userId !== req.userId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    await importItem.deleteOne();
+    res.json({ message: 'Import removed' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

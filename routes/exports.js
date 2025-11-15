@@ -1,104 +1,140 @@
 const express = require('express');
-const router = express.Router();
+const { check, validationResult } = require('express-validator');
 const Export = require('../models/Export');
-const Product = require('../models/Product');
 
-router.post('/', async (req, res) => {
-  const { name, image, price, country, rating, availableQuantity, userId } = req.body;
+const router = express.Router();
+router.post(
+  '/',
+  [
+    check('name', 'Product name is required').not().isEmpty(),
+    check('image', 'Image URL is required').isURL(),
+    check('price', 'Price must be a positive number').isFloat({ min: 0 }),
+    check('originCountry', 'Origin country is required').not().isEmpty(),
+    check('rating', 'Rating must be between 0 and 5').isFloat({ min: 0, max: 5 }),
+    check('availableQuantity', 'Available quantity must be a positive number').isInt({ min: 0 }),
+  ],
+  async (req, res) => {
+    const userId = req.header('X-User-ID');
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized: No user ID provided' });
+    }
 
-  if (!name || !image || !price || !country || !availableQuantity || !userId) {
-    return res.status(400).json({ error: 'All required fields are missing' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, image, price, originCountry, rating, availableQuantity } = req.body;
+
+    try {
+      console.log('Creating export with data:', { userId, name, image, price, originCountry, rating, availableQuantity });
+      const exportItem = new Export({
+        userId,
+        name,
+        image,
+        price,
+        originCountry,
+        rating,
+        availableQuantity,
+      });
+      await exportItem.save();
+      console.log('Export saved:', exportItem);
+      res.status(201).json(exportItem);
+    } catch (error) {
+      console.error('Error saving export:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
   }
+);
 
-  try {
-    const newProduct = new Product({
-      name,
-      image,
-      price,
-      country,
-      rating: rating || 4.5,
-      availableQuantity,
-      addedBy: userId,
-    });
-
-    await newProduct.save();
-
-    const newExport = new Export({
-      product: newProduct._id,
-      userId,
-    });
-
-    await newExport.save();
-
-    res.status(201).json({ message: 'Product added successfully', product: newProduct });
-  } catch (err) {
-    console.error('Add export error:', err);
-    res.status(500).json({ error: err.message || 'Server error' });
-  }
-});
-
-router.get('/my', async (req, res) => {
-  const { userId } = req.query;
-
+router.get('/', async (req, res) => {
+  const userId = req.header('X-User-ID');
   if (!userId) {
-    return res.status(400).json({ error: 'userId is required' });
+    return res.status(401).json({ message: 'Unauthorized: No user ID provided' });
   }
 
   try {
-    const exports = await Export.find({ userId }).populate('product').sort({ createdAt: -1 });
+    const exports = await Export.find({ userId });
+    console.log('Fetched exports for user:', userId, exports);
     res.json(exports);
-  } catch (err) {
-    console.error('Get exports error:', err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error('Error fetching exports:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
-
-router.put('/:id', async (req, res) => {
-  const { name, image, price, country, rating, availableQuantity, userId } = req.body;
-  const exportId = req.params.id;
-
-  if (!name || !image || !price || !country || !availableQuantity || !userId) {
-    return res.status(400).json({ error: 'All required fields are missing' });
-  }
-
-  try {
-    const exp = await Export.findOne({ _id: exportId, userId });
-    if (!exp) {
-      return res.status(404).json({ error: 'Export not found or unauthorized' });
-    }
-    
-    const updatedProduct = await Product.findByIdAndUpdate(
-      exp.product,
-      { name, image, price, country, rating: rating || 4.5, availableQuantity },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedProduct) {
-      return res.status(404).json({ error: 'Associated product not found' });
+router.put(
+  '/:id',
+  [
+    check('name', 'Product name is required').optional().not().isEmpty(),
+    check('image', 'Image URL is required').optional().isURL(),
+    check('price', 'Price must be a positive number').optional().isFloat({ min: 0 }),
+    check('originCountry', 'Origin country is required').optional().not().isEmpty(),
+    check('rating', 'Rating must be between 0 and 5').optional().isFloat({ min: 0, max: 5 }),
+    check('availableQuantity', 'Available quantity must be a positive number').optional().isInt({ min: 0 }),
+  ],
+  async (req, res) => {
+    const userId = req.header('X-User-ID');
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized: No user ID provided' });
     }
 
-    res.json({ message: 'Product updated successfully', export: { ...exp.toObject(), product: updatedProduct } });
-  } catch (err) {
-    console.error('Update error:', err);
-    res.status(500).json({ error: err.message || 'Server error' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { name, image, price, originCountry, rating, availableQuantity } = req.body;
+
+    try {
+      const exportItem = await Export.findById(req.params.id);
+      if (!exportItem) {
+        return res.status(404).json({ message: 'Export not found' });
+      }
+
+      if (exportItem.userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+
+      exportItem.name = name || exportItem.name;
+      exportItem.image = image || exportItem.image;
+      exportItem.price = price || exportItem.price;
+      exportItem.originCountry = originCountry || exportItem.originCountry;
+      exportItem.rating = rating || exportItem.rating;
+      exportItem.availableQuantity = availableQuantity || exportItem.availableQuantity;
+
+      await exportItem.save();
+      console.log('Export updated:', exportItem);
+      res.json(exportItem);
+    } catch (error) {
+      console.error('Error updating export:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
   }
-});
+);
 router.delete('/:id', async (req, res) => {
-  const exportId = req.params.id;
+  const userId = req.header('X-User-ID');
+  if (!userId) {
+    return res.status(401).json({ message: 'Unauthorized: No user ID provided' });
+  }
 
   try {
-    const exp = await Export.findById(exportId);
-    if (!exp) {
-      return res.status(404).json({ error: 'Export not found' });
+    const exportItem = await Export.findById(req.params.id);
+    if (!exportItem) {
+      return res.status(404).json({ message: 'Export not found' });
     }
 
-    await Product.findByIdAndDelete(exp.product);
-    await Export.findByIdAndDelete(exportId);
+    if (exportItem.userId !== userId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
 
-    res.json({ message: 'Product deleted successfully' });
-  } catch (err) {
-    console.error('Delete error:', err);
-    res.status(500).json({ error: err.message || 'Server error' });
+    await exportItem.deleteOne();
+    console.log('Export deleted:', req.params.id);
+    res.json({ message: 'Export removed' });
+  } catch (error) {
+    console.error('Error deleting export:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

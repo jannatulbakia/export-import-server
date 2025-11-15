@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Organic Coffee Beans",
+    "image": "https://i.ibb.co.com/cK4YrcmB/coffe-beans.jpg",
+    "price": 15.99,
+    "originCountry": "Ethiopia",
+    "rating": 4.5,
+    "availableQuantity": 100,
+    "createdAt": "2025-11-01T10:00:00Z"
+  },
+  {
+    "name": "Handwoven Silk Scarf",
+    "image": "https://i.ibb.co.com/nMY0dZ94/silk.jpg",
+    "price": 29.99,
+    "originCountry": "India",
+    "rating": 4.8,
+    "availableQuantity": 50,
+    "createdAt": "2025-11-02T12:00:00Z"
+  },
+  {
+    "name": "Ceramic Dinner Set",
+    "image": "https://i.ibb.co.com/ch348MyN/dinner-set.webp",
+    "price": 79.99,
+    "originCountry": "Japan",
+    "rating": 4.2,
+    "availableQuantity": 30,
+    "createdAt": "2025-11-03T15:00:00Z"
+  },
+  {
+    "name": "Leather Wallet",
+    "image": "https://i.ibb.co.com/TMRFTp7f/leather-wallet.webp",
+    "price": 39.99,
+    "originCountry": "Italy",
+    "rating": 4.7,
+    "availableQuantity": 80,
+    "createdAt": "2025-11-04T09:00:00Z"
+  },
+  {
+    "name": "Teak Wood Chair",
+    "image": "https://i.ibb.co.com/Z6H8Wn8f/teak-wood.jpg",
+    "price": 199.99,
+    "originCountry": "Indonesia",
+    "rating": 4.9,
+    "availableQuantity": 20,
+    "createdAt": "2025-11-05T11:00:00Z"
+  },
+  {
+    "name": "Spiced Olive Oil",
+    "image": "https://i.ibb.co.com/Lz1xd2Mn/olive-oil.jpg",
+    "price": 12.99,
+    "originCountry": "Spain",
+    "rating": 4.3,
+    "availableQuantity": 150,
+    "createdAt": "2025-11-06T14:00:00Z"
+  },
+  {
+    "name": "Bamboo Cutting Board",
+    "image": "https://i.ibb.co.com/KjmK0xWF/cuttinf-board.jpg",
+    "price": 24.99,
+    "originCountry": "China",
+    "rating": 4.6,
+    "availableQuantity": 60,
+    "createdAt": "2025-11-07T16:00:00Z"
+  },
+  {
+    "name": "Wool Blanket",
+    "image": "https://i.ibb.co.com/M5gk1Vqn/blanket-new-ze.jpg",
+    "price": 59.99,
+    "originCountry": "New Zealand",
+    "rating": 4.4,
+    "availableQuantity": 40,
+    "createdAt": "2025-11-08T13:00:00Z"
+  }
+]
